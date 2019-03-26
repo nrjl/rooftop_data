@@ -1,0 +1,7 @@
+# Python compiled stuff
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data folder
+data/
