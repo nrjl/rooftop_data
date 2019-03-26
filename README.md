@@ -3,7 +3,7 @@ This package downloads and creates yaml messages for the [EPFL polygon rooftop](
 
 ## Requirements
 ```
-pip install numpy scipy imageio argparse matplotlib pyyaml
+pip install numpy scipy imageio argparse matplotlib pyyaml urllib3 pyyaml
 ```
 
 ## Build dataset
