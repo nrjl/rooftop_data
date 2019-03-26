@@ -3,7 +3,7 @@ This package downloads and creates yaml files (to be used as [PolygonWithHoles](
 
 ## Requirements
 ```
-pip install numpy scipy imageio argparse matplotlib pyyaml urllib3 pyyaml
+pip install numpy scipy imageio argparse matplotlib pyyaml urllib3
 ```
 
 ## Build dataset
