@@ -4,54 +4,8 @@ from imageio import imread
 import os
 import argparse
 import matplotlib.pyplot as plt
-import yaml
 from data_downloader import MrDataGrabber
-
-# NOTE: All polygons are assumed to be automatically closed, so the polygon definition contains each vertex once only,
-# and the last vertex is assumed to connect to the first vertex (i.e. first vertex should not be repeated at the end)
-
-class PolygonScene(object):
-    def __init__(self, hull, obstacles):
-        # hull describes the outer hull as a polygon (assume closed between first and last point)
-        self.hull = hull
-
-        # obstacles is a list of obstacles, each as an nx2 array of (x,y) points in pixel coords
-        self.obstacles = obstacles
-
-
-    @staticmethod
-    def _build_polygon_dict(points):
-        polygon = []
-        for p in points:
-            polygon.append({'x': float(p[0]), 'y': float(p[1])})
-        return {'points': polygon}
-
-    def _plot_poly(self, ah, p, ls='r-'):
-        ah.plot(np.append(p[:,0], p[0,0]), np.append(p[:,1], p[0,1]), ls)
-
-    def _plot_obstacles(self, ah, *args, **kwargs):
-        for p in self.obstacles:
-            self._plot_poly(ah, p, *args, **kwargs)
-
-    def plot(self, ah=None):
-        if ah is None:
-            fh, ah = plt.subplots()
-        self._plot_poly(ah, self.hull, 'b-')
-        self._plot_obstacles(ah, 'r-')
-
-    def _build_obstacle_list(self):
-        obstacle_list = []
-        for obs in self.obstacles:
-            obstacle_list.append(self._build_polygon_dict(obs))
-        return obstacle_list
-
-    def make_yaml_message(self, filename):
-        full_dict = {'hull': self._build_polygon_dict(self.hull)}
-        full_dict['holes'] = self._build_obstacle_list()
-
-        with open(filename, 'wt') as fh:
-            yaml.dump(full_dict, fh)
-
+from polygon_tools import Polygon, PolygonScene
 
 
 class RoofScene(PolygonScene):
@@ -68,8 +22,8 @@ class RoofScene(PolygonScene):
             raise
 
         h, w, c = self.image_data.shape
-        self.hull = np.array([[0, 0], [w, 0], [w, h], [0, h]])
-        self.obstacles = np.array(mat_data['gt'][0])
+        self.hull = Polygon([[0, 0], [w, 0], [w, h], [0, h]])
+        self.obstacles =  [Polygon(obs) for obs in np.array(mat_data['gt'][0])]
 
     def plot(self, ah=None):
         if ah is None:
@@ -119,15 +73,16 @@ class RoofDataset(object):
         print('{0} polygon roof definitions created in {1}.'.format(len(self.roof_scenes), target_dir))
 
     def create_synthetic_data(self, n_obstacles, n_samples, hull=None):
+        # Use same outer hull for all
         if hull is None:
             hull = self.roof_scenes[0].hull
 
         for i in range(n_samples):
+            # Add obstacles by sampling from all roofs
             pass
 
-
     def print_stats(self):
-        n_roofs = np.array([scene.obstacles.shape[0] for scene in self.roof_scenes])
+        n_roofs = np.array([len(scene.obstacles) for scene in self.roof_scenes])
         print('{0} total roof polygons across {1} images.'.format(n_roofs.sum(), len(n_roofs)))
         print('Roofs per image: min {0}, max {1}, mean {2:0.2f}'.format(n_roofs.min(), n_roofs.max(), n_roofs.mean()))
 
