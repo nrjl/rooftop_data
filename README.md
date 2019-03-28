@@ -1,9 +1,9 @@
 # rooftop_data
-This package downloads and creates yaml messages for the [EPFL polygon rooftop](https://cvlab.epfl.ch/data/data-polygonalobjectdataset/) dataset.
+This package downloads and creates yaml files (to be used as [PolygonWithHoles](https://github.com/ethz-asl/mav_comm/blob/master/mav_planning_msgs/msg/PolygonWithHoles.msg) ROS messages) from the [EPFL polygon rooftop](https://cvlab.epfl.ch/data/data-polygonalobjectdataset/) dataset.
 
 ## Requirements
 ```
-pip install numpy scipy imageio argparse matplotlib pyyaml
+pip install numpy scipy imageio argparse matplotlib pyyaml urllib3
 ```
 
 ## Build dataset
