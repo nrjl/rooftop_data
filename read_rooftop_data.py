@@ -5,7 +5,7 @@ import os
 import argparse
 import matplotlib.pyplot as plt
 from data_downloader import MrDataGrabber
-from polygon_tools import Polygon, PolygonScene
+from polygon_tools import Polygon, PolygonScene, MaxIterationsException
 
 
 class RoofScene(PolygonScene):
@@ -72,30 +72,27 @@ class RoofDataset(object):
             scene.make_yaml_message(target_dir=target_dir)
         print('{0} polygon roof definitions created in {1}.'.format(len(self.roof_scenes), target_dir))
 
-    def create_synthetic_data(self, n_obstacles, n_samples, hull=None):
-        # Use same outer hull for all
-        if hull is None:
-            hull = self.roof_scenes[0].hull
-
-        for i in range(n_samples):
-            # Add obstacles by sampling from all roofs
-            pass
-
     def print_stats(self):
         n_roofs = np.array([len(scene.obstacles) for scene in self.roof_scenes])
         print('{0} total roof polygons across {1} images.'.format(n_roofs.sum(), len(n_roofs)))
         print('Roofs per image: min {0}, max {1}, mean {2:0.2f}'.format(n_roofs.min(), n_roofs.max(), n_roofs.mean()))
 
 
+def safe_mkdir(dir):
+    if not os.path.exists(dir):
+        os.mkdir(dir)
+        print('Created directory {0}'.format(dir))
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Script to remove bad data from a database')
+    parser = argparse.ArgumentParser(
+        description='Read the EPFL roof polygon dataset and generate yaml PolygonWithHoles message files.')
     parser.add_argument('-p', '--plot', action='store_true', help='Plot a random image from the database')
     parser.add_argument('-y', '--yaml_dir', default='./data/Rooftop/yaml', help='Target location for yaml files')
     parser.add_argument('-d', '--data_dir', default='./data', help='Target location for downloading data')
     args = parser.parse_args()
 
-    if not os.path.exists(args.data_dir):
-        os.mkdir(args.data_dir)
+    safe_mkdir(args.data_dir)
+    safe_mkdir(args.yaml_dir)
     data_grabber = MrDataGrabber('http://cvlab.epfl.ch/wp-content/uploads/2018/08/Rooftop.zip', args.data_dir)
     data_grabber.download()
     epfl_roofscenes = RoofDataset(data_location=os.path.join(args.data_dir, 'Rooftop'))

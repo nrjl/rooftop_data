@@ -2,6 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import yaml
 
+
+class MaxIterationsException(Exception):
+    pass
+
 # NOTE: All Polygons are assumed to be automatically closed, so the polygon definition contains each vertex ONCE only,
 # and the last vertex is assumed to connect to the first vertex (i.e. first vertex should not be repeated at the end)
 
@@ -35,12 +39,22 @@ class Polygon(np.ndarray):
         assert obj.shape[1] is 2, "Polygon must be created with nx2 input array"
         return obj
 
-    def crossing_number(self, p):
+    def _outside_limits(self, p):
+        # Return true if point is definitely outside (boundary check)
+        if np.any(p < self.min(axis=0)) or np.any(p > self.max(axis=0)):
+            return True
+        else:
+            return False
+
+    def point_inside_cn(self, p):
         #  crossing_number(): crossing number test for a point in a polygon
         #       Input:   P = a point,
         #                V[] = vertex points of a polygon V[n+1] with V[n]=V[0]
-        #       Return:  0 = outside, 1 = inside
+        #       Return:  False = outside, True = inside
         #  This code is patterned after [Franklin, 2000]
+        if self._outside_limits(p):
+            return False
+
         cn = 0                                                  # crossing number counter
         #  loop through all edges of the polygon
         for i in range(self.shape[0]):                          # edge from V[i]  to V[i+1]
@@ -52,11 +66,15 @@ class Polygon(np.ndarray):
                      cn += 1                                    # a valid crossing of y=P.y right of P.x
         return bool(cn % 2)                                     # 0 if even (out), and 1 if  odd (in)
 
-    def winding_number(self, p):
+    def point_inside_wn(self, p):
         #  winding_number(): winding number test for a point in a polygon
         #       Input:   p = a point,
         #                V[] = vertex points of a polygon V[n+1] with V[n]=V[0]
-        #       Return:  wn = the winding number (=0 only when P is outside)
+        #       Return:  False = outside, True = inside
+        # wn = the winding number (=0 only when P is outside)
+        if self._outside_limits(p):
+            return False
+
         wn = 0    #  the  winding number counter
 
         #  loop through all edges of the polygon
@@ -79,10 +97,29 @@ class Polygon(np.ndarray):
     def rotate(self, angle, units='rad'):
         if angle == 'deg':
             angle *= np.pi/180
-        R = np.array([[np.cos(angle), np.sin(angle)], [-np.sin(angle), np.cos(angle)]])
-        return np.matmul(self, R)
+        rot_matrix = np.array([[np.cos(angle), np.sin(angle)], [-np.sin(angle), np.cos(angle)]])
+        return np.matmul(self, rot_matrix)
 
-# ===================================================================
+    def place_inside(self, obs, max_attempts = 1e2):
+        # Randomly rotate and shift the obstacle so that it fits inside the hull
+        # NOTE: Currently assumes hull is rectangular!
+        angle = np.random.uniform(-np.pi, np.pi)
+        new_obs = obs.rotate(angle)
+        in_hull = False
+        n_attempts = 0
+        while not in_hull:
+            n_attempts += 1
+            if n_attempts > max_attempts:
+                raise MaxIterationsException('Maximum attempts to place obs in hull reached!')
+            shift = np.random.uniform(self.min(axis=0)-new_obs.min(axis=0), self.max(axis=0)-new_obs.max(axis=0))
+            in_hull = True
+            for p in new_obs:
+                if not self.point_inside_wn(p + shift):
+                    in_hull = False
+                    break
+        if not in_hull:
+            raise MaxIterationsException
+        return new_obs + shift
 
 def plot_poly_test(V,n):
     fig1, ax1 = plt.subplots(1, 1)
