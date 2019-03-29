@@ -29,6 +29,51 @@ def is_left(p0, p1, p2):
     return (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p2[0] - p0[0]) * (p1[1] - p0[1])
 
 
+def on_segment(segment, point):
+    # Check if point is on segment (assuming they are colinear)
+    if np.all(point > segment.min(axis=0)) and np.all(point < segment.max(axis=0)):
+        return True
+    return False
+
+def orientation(p0, p1, p2):
+    # Orientation for traversing around 3 points (p0->p1->p2)
+    # Return is -1 for counterclockwise, 0 for colinear, 1 for clockwise
+    d10 = p1-p0
+    d21 = p2-p1
+    orient = d10[1]*d21[0] - d21[1]*d10[0]
+    return np.sign(orient)
+
+def segment_intersection(seg0, seg1):
+    # Check if two segments intersect
+    # https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+    o1 = orientation(seg0[0], seg0[1], seg1[0])
+    o2 = orientation(seg0[0], seg0[1], seg1[1])
+    o3 = orientation(seg1[0], seg1[1], seg0[0])
+    o4 = orientation(seg1[0], seg1[1], seg0[1])
+
+    if (o1 != o2) and (o3!=o4):
+        return True
+
+    # Special Cases
+    # seg1[0] lies on seg0 (colinear and on segment)
+    if (o1 == 0) and on_segment(seg0, seg1[0]):
+        return True
+
+    # seg1[1] lies on seg0
+    if (o2 == 0) and on_segment(seg0, seg1[1]):
+        return True
+
+    # seg0[0] lies on seg1
+    if (o3 == 0) and on_segment(seg1, seg0[0]):
+        return True
+
+    # seg0[1] lies on seg1
+    if (o4 == 0) and on_segment(seg0, seg0[1]):
+        return True
+
+    return False
+
+
 class Polygon(np.ndarray):
     # Basically subclass the numpy ndarray object, slightly cheatily, so I can add the point in polygon methods
     # https://docs.scipy.org/doc/numpy/user/basics.subclassing.html
@@ -91,6 +136,10 @@ class Polygon(np.ndarray):
                         wn -= 1                             # have  a valid down intersect
         return bool(wn)
 
+    def point_inside(self, p):
+        # Default to winding number test
+        return self.point_inside_wn(p)
+
     def origin_offset(self):
         return self - self[0]
 
@@ -121,6 +170,32 @@ class Polygon(np.ndarray):
             raise MaxIterationsException
         return new_obs + shift
 
+    def overlap(self, other_poly):
+        # First check if they are outside each other's bounding boxes
+        if np.any(other_poly.max(axis=0) < self.min(axis=0)) or np.any(other_poly.min(axis=0) > self.max(axis=0)):
+            return False
+
+        # Next check if any points are contained in other:
+        for p in other_poly:
+            if self.point_inside(p):
+                return True
+        for p in self:
+            if other_poly.point_inside(p):
+                return True
+
+        # Finally, check for intersecting edges
+        for i in range(len(self)):
+            ip = (i+1)%len(self)
+            for j in range(len(other_poly)):
+                jp = (j+1)%len(other_poly)
+                if segment_intersection(self[[i,ip]], other_poly[[j,jp]]):
+                    return True
+
+        return False
+
+    def plot(self, ah, ls='r-'):
+        return ah.plot(np.append(self[:,0], self[0,0]), np.append(self[:,1], self[0,1]), ls)
+
 def plot_poly_test(V,n):
     fig1, ax1 = plt.subplots(1, 1)
     PX = np.random.uniform(V[:,0].min()-1, V[:,0].max()+1, (n,1))
@@ -145,19 +220,18 @@ class PolygonScene(object):
             polygon.append({'x': float(p[0]), 'y': float(p[1])})
         return {'points': polygon}
 
-    @staticmethod
-    def _plot_poly(ah, p, ls='r-'):
-        ah.plot(np.append(p[:,0], p[0,0]), np.append(p[:,1], p[0,1]), ls)
-
     def _plot_obstacles(self, ah, *args, **kwargs):
+        out = []
         for p in self.obstacles:
-            self._plot_poly(ah, p, *args, **kwargs)
+            out.extend(p.plot(ah, *args, **kwargs))
+        return out
 
     def plot(self, ah=None):
         if ah is None:
             fh, ah = plt.subplots()
-        self._plot_poly(ah, self.hull, 'b-')
-        self._plot_obstacles(ah, 'r-')
+        out = self.hull.plot(ah, 'b-')
+        out.extend(self._plot_obstacles(ah, 'r-'))
+        return out
 
     def _build_obstacle_list(self):
         obstacle_list = []
@@ -171,3 +245,4 @@ class PolygonScene(object):
 
         with open(filename, 'wt') as fh:
             yaml.dump(full_dict, fh)
+

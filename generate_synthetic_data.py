@@ -5,7 +5,8 @@ import os
 import argparse
 from read_rooftop_data import RoofDataset, MrDataGrabber, safe_mkdir
 
-def create_synthetic_data(hull, obstacle_list, n_obstacles, n_samples, target_dir='./', max_failures=100):
+def create_synthetic_data(hull, obstacle_list, n_obstacles, n_samples, target_dir='./', max_failures=100,
+                          no_overlaps=False):
     # Use same outer hull for all
 
     for i in range(n_samples):
@@ -17,9 +18,19 @@ def create_synthetic_data(hull, obstacle_list, n_obstacles, n_samples, target_di
                 new_obs = hull.place_inside(np.random.choice(obstacle_list))
             except MaxIterationsException:
                 print('Could not place obstacle in hull in max iterations. Continuing.')
-                n_failures += 1
+                n_failures += 1syn
                 continue
-            obs.append(new_obs)
+            if (not no_overlaps):
+                obs.append(new_obs)
+            else:
+                intersect = False
+                for p in obs:
+                    if new_obs.overlap(p):
+                        n_failures += 1
+                        intersect = True
+                        break
+                if not intersect:
+                    obs.append(new_obs)
         if n_failures >= max_failures:
             raise MaxIterationsException('Too many failed attempts at placing obstacles in hull!')
         new_scene = PolygonScene(hull, obs)
@@ -33,9 +44,11 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--plot', action='store_true', help='Plot a random image from the database')
     parser.add_argument('-y', '--yaml_dir', default='./data/random', help='Target location for yaml files')
     parser.add_argument('-d', '--data_dir', default='./data', help='Target location for downloading data')
-    parser.add_argument('-ns', '--n_samples', default=1, help='Number of random samples')
-    parser.add_argument('-no', '--n_obstacles', default=5, help='Number of obstacles (roof polygons) per sample')
-    parser.add_argument('--hull_size', nargs=2, default=[-1, -1], help='Specific hull size w h (default to dataset image size)')
+    parser.add_argument('-ns', '--n_samples', default=1, type=int, help='Number of random samples')
+    parser.add_argument('-no', '--n_obstacles', default=5, type=int, help='Number of obstacles (roof polygons) per sample')
+    parser.add_argument('--hull_size', nargs=2, default=[-1, -1],
+                        help='Specific hull size w h (default to dataset image size)')
+    parser.add_argument('--no-overlaps', action='store_true', help='Do not allow overlap of obstacle polygons (slower)')
     args = parser.parse_args()
 
     safe_mkdir(args.data_dir)
@@ -50,7 +63,7 @@ if __name__ == "__main__":
     else:
         hull = Polygon([[0, 0], [args.hull_size[0], 0], [args.hull_size[0], args.hull_size[1]], [0, args.hull_size[1]]])
     final_scene = create_synthetic_data(hull, epfl_roofscenes.all_roofs, n_obstacles=args.n_obstacles,
-                                        n_samples=args.n_samples, target_dir=args.data_dir)
+                                        n_samples=args.n_samples, target_dir=args.data_dir, no_overlaps=args.no_overlaps)
     if args.plot:
         final_scene.plot()
-        plt.show(block=False)
+        plt.show()
