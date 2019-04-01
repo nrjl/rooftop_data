@@ -18,7 +18,7 @@ def create_synthetic_data(hull, obstacle_list, n_obstacles, n_samples, target_di
                 new_obs = hull.place_inside(np.random.choice(obstacle_list))
             except MaxIterationsException:
                 print('Could not place obstacle in hull in max iterations. Continuing.')
-                n_failures += 1syn
+                n_failures += 1
                 continue
             if (not no_overlaps):
                 obs.append(new_obs)
