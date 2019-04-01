@@ -18,7 +18,7 @@ def create_synthetic_data(hull, obstacle_list, n_obstacles, n_samples, target_di
                 new_obs = hull.place_inside(np.random.choice(obstacle_list))
             except MaxIterationsException:
                 print('Could not place obstacle in hull in max iterations. Continuing.')
-                n_failures += 1syn
+                n_failures += 1
                 continue
             if (not no_overlaps):
                 obs.append(new_obs)
@@ -45,10 +45,11 @@ if __name__ == "__main__":
     parser.add_argument('-y', '--yaml_dir', default='./data/random', help='Target location for yaml files')
     parser.add_argument('-d', '--data_dir', default='./data', help='Target location for downloading data')
     parser.add_argument('-ns', '--n_samples', default=1, type=int, help='Number of random samples')
+    parser.add_argument('-rs', '--random_seed', default=-1, type=int, help='numpy random seed')
     parser.add_argument('-no', '--n_obstacles', default=5, type=int, help='Number of obstacles (roof polygons) per sample')
     parser.add_argument('--hull_size', nargs=2, default=[-1, -1],
                         help='Specific hull size w h (default to dataset image size)')
-    parser.add_argument('--no-overlaps', action='store_true', help='Do not allow overlap of obstacle polygons (slower)')
+    parser.add_argument('--no_overlaps', action='store_true', help='Do not allow overlap of obstacle polygons (slower)')
     args = parser.parse_args()
 
     safe_mkdir(args.data_dir)
@@ -57,6 +58,9 @@ if __name__ == "__main__":
     data_grabber.download()
     epfl_roofscenes = RoofDataset(data_location=os.path.join(args.data_dir, 'Rooftop'))
     epfl_roofscenes.print_stats()
+
+    if args.random_seed > 0:
+        np.random.seed(args.random_seed)
 
     if args.hull_size[0] < 0:
         hull = epfl_roofscenes.roof_scenes[0].hull
