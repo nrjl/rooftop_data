@@ -67,7 +67,7 @@ if __name__ == "__main__":
     else:
         hull = Polygon([[0, 0], [args.hull_size[0], 0], [args.hull_size[0], args.hull_size[1]], [0, args.hull_size[1]]])
     final_scene = create_synthetic_data(hull, epfl_roofscenes.all_roofs, n_obstacles=args.n_obstacles,
-                                        n_samples=args.n_samples, target_dir=args.data_dir, no_overlaps=args.no_overlaps)
+                                        n_samples=args.n_samples, target_dir=args.yaml_dir, no_overlaps=args.no_overlaps)
     if args.plot:
         final_scene.plot()
         plt.show()
