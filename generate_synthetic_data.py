@@ -62,10 +62,11 @@ if __name__ == "__main__":
     if args.random_seed > 0:
         np.random.seed(args.random_seed)
 
-    if args.hull_size[0] < 0:
+    hull_size = [int(hs) for hs in args.hull_size]
+    if hull_size[0] < 0:
         hull = epfl_roofscenes.roof_scenes[0].hull
     else:
-        hull = Polygon([[0, 0], [args.hull_size[0], 0], [args.hull_size[0], args.hull_size[1]], [0, args.hull_size[1]]])
+        hull = Polygon([[0, 0], [hull_size[0], 0], [hull_size[0], hull_size[1]], [0, hull_size[1]]])
     final_scene = create_synthetic_data(hull, epfl_roofscenes.all_roofs, n_obstacles=args.n_obstacles,
                                         n_samples=args.n_samples, target_dir=args.yaml_dir, no_overlaps=args.no_overlaps)
     if args.plot:
