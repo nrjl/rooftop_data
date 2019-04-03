@@ -209,15 +209,16 @@ def plot_poly_test(V,n):
 
 
 class PolygonScene(object):
-    def __init__(self, hull, obstacles):
+    def __init__(self, hull, obstacles, scale=1.0):
         self.hull = Polygon(hull)                             # outer hull as a polygon
         self.obstacles = [Polygon(obs) for obs in obstacles]  # list of (Polygon) obstacles
+        self.scale = scale
 
     @staticmethod
-    def _build_polygon_dict(points):
+    def _build_polygon_dict(points, scale=1.0):
         polygon = []
         for p in points:
-            polygon.append({'x': float(p[0]), 'y': float(p[1])})
+            polygon.append({'x': scale * float(p[0]), 'y': scale * float(p[1])})
         return {'points': polygon}
 
     def _plot_obstacles(self, ah, *args, **kwargs):
@@ -236,13 +237,12 @@ class PolygonScene(object):
     def _build_obstacle_list(self):
         obstacle_list = []
         for obs in self.obstacles:
-            obstacle_list.append(self._build_polygon_dict(obs))
+            obstacle_list.append(self._build_polygon_dict(obs, self.scale))
         return obstacle_list
 
     def make_yaml_message(self, filename):
-        full_dict = {'hull': self._build_polygon_dict(self.hull)}
+        full_dict = {'hull': self._build_polygon_dict(self.hull, self.scale)}
         full_dict['holes'] = self._build_obstacle_list()
 
         with open(filename, 'wt') as fh:
             yaml.dump(full_dict, fh)
-

@@ -6,7 +6,7 @@ import argparse
 from read_rooftop_data import RoofDataset, MrDataGrabber, safe_mkdir
 
 def create_synthetic_data(hull, obstacle_list, n_obstacles, n_samples, target_dir='./', max_failures=100,
-                          no_overlaps=False):
+                          no_overlaps=False, scale=1.0):
     # Use same outer hull for all
 
     for i in range(n_samples):
@@ -33,7 +33,7 @@ def create_synthetic_data(hull, obstacle_list, n_obstacles, n_samples, target_di
                     obs.append(new_obs)
         if n_failures >= max_failures:
             raise MaxIterationsException('Too many failed attempts at placing obstacles in hull!')
-        new_scene = PolygonScene(hull, obs)
+        new_scene = PolygonScene(hull, obs, scale)
         outfile = os.path.join(target_dir, '{0:04d}.yaml'.format(i))
         new_scene.make_yaml_message(outfile)
         print('Generated new sample {0}, with {1} obstacles.'.format(outfile, len(obs)))
@@ -50,6 +50,7 @@ if __name__ == "__main__":
     parser.add_argument('--hull_size', nargs=2, default=[-1, -1],
                         help='Specific hull size w h (default to dataset image size)')
     parser.add_argument('--no_overlaps', action='store_true', help='Do not allow overlap of obstacle polygons (slower)')
+    parser.add_argument('--scale', default=1.0, type=float, help='Factor to scale polygon map.')
     args = parser.parse_args()
 
     safe_mkdir(args.data_dir)
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     else:
         hull = Polygon([[0, 0], [hull_size[0], 0], [hull_size[0], hull_size[1]], [0, hull_size[1]]])
     final_scene = create_synthetic_data(hull, epfl_roofscenes.all_roofs, n_obstacles=args.n_obstacles,
-                                        n_samples=args.n_samples, target_dir=args.yaml_dir, no_overlaps=args.no_overlaps)
+                                        n_samples=args.n_samples, target_dir=args.yaml_dir, no_overlaps=args.no_overlaps, scale=args.scale)
     if args.plot:
         final_scene.plot()
         plt.show()
